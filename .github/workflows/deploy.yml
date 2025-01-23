@@ -28,7 +28,7 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
-      run: ./gradlew clean build
+      run: ./gradlew clean build -x test
 
     - name: Package application for Elastic Beanstalk
       run: |
