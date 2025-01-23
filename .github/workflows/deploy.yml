@@ -54,3 +54,5 @@ jobs:
         region: ap-northeast-2
         deployment_package: build/app.zip
         version_label: ${{ github.run_id }}
+      env:
+        SPRING_PROFILES_ACTIVE: prod
