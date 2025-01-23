@@ -32,7 +32,7 @@ jobs:
 
     - name: Package application for Elastic Beanstalk
       run: |
-        mkdir build
+        mkdir -p build
         cp build/libs/*.jar build/application.jar
         cd build
         zip -r app.zip application.jar
