@@ -1,0 +1,46 @@
+name: Deploy Spring Boot to Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.gradle
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Package application for Elastic Beanstalk
+      run: |
+        mkdir build
+        cp build/libs/*.jar build/application.jar
+        cd build
+        zip -r app.zip application.jar
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v20
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: poppick-api
+        environment_name: Poppick-api-env
+        region: ap-northeast-2
+        deployment_package: build/app.zip
+        version_label: ${{ github.run_id }}
