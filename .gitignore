@@ -38,3 +38,6 @@ out/
 
 ### Mac File ###
 .DS_Store
+
+### DB File ###
+pgdata/

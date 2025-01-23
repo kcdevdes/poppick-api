@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: poppick-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: db_secret
+      POSTGRES_DB: poppick
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
