@@ -7,6 +7,14 @@ plugins {
 group = 'com.kcdevdes'
 version = '0.0.1-SNAPSHOT'
 
+springBoot {
+    mainClass = 'com.kcdevdes.poppick.PopPickApplication'
+}
+
+jar {
+    enabled = false
+}
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
@@ -36,5 +44,6 @@ tasks.named('test') {
 }
 
 bootJar {
+	enabled = true
     mainClass = 'com.kcdevdes.poppick.PopPickApplication'
 }
