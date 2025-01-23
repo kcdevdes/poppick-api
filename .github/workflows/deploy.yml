@@ -27,6 +27,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
 
+    - name: Build with Gradle
+      run: ./gradlew clean build
+
     - name: Package application for Elastic Beanstalk
       run: |
         mkdir build
