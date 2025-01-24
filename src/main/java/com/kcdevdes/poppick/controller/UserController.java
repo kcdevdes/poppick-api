@@ -77,13 +77,23 @@ public class UserController {
         return ResponseEntity.ok(userMapper.toDto(updatedUser));
     }
 
-//
-//    @DeleteMapping("/me")
-//    public void deleteMyUser(@RequestHeader("Authorization") String token) {
-//        // Extract user email from token
-//        String email;
-//        userService.deleteUser(email);
-//    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<String> deleteMyUser(@RequestHeader("Authorization") String token) {
+        // Extract user email from token
+        String jwt = extractEmailFromToken(token);
+
+        if (!jwtProvider.validateToken(jwt)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
+
+        // Retrieve user email from token
+        String email = jwtProvider.getEmailFromToken(jwt);
+        User user = userService.getUserByEmail(email);
+
+        userService.deleteUser(user.getId());
+        return ResponseEntity.ok().body("User deleted successfully");
+    }
 
 
     private String extractEmailFromToken(String token) {
