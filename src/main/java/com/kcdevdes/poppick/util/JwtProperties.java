@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.provider;
+package com.kcdevdes.poppick.util;
 
 import lombok.Getter;
 import lombok.Setter;

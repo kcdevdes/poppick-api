@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.provider;
+package com.kcdevdes.poppick.util;
 
 import com.kcdevdes.poppick.dto.JwtResponseDto;
 import io.jsonwebtoken.Claims;

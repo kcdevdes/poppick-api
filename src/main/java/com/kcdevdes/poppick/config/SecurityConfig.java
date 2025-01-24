@@ -1,12 +1,10 @@
 package com.kcdevdes.poppick.config;
 
-import com.kcdevdes.poppick.provider.JwtAuthenticationFilter;
-import com.kcdevdes.poppick.provider.JwtProvider;
+import com.kcdevdes.poppick.util.JwtAuthenticationFilter;
+import com.kcdevdes.poppick.util.JwtProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -32,7 +30,6 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/v1/users/signup", "/v1/users/login").permitAll()
-                .requestMatchers("/v1/users/me").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
