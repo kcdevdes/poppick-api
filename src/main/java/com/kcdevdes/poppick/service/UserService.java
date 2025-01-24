@@ -1,14 +1,23 @@
 package com.kcdevdes.poppick.service;
 
 import com.kcdevdes.poppick.domain.User;
+import com.kcdevdes.poppick.dto.JwtResponseDto;
 import com.kcdevdes.poppick.dto.LoginRequestDto;
 import com.kcdevdes.poppick.dto.SignupRequestDto;
+import com.kcdevdes.poppick.provider.JwtProvider;
 import com.kcdevdes.poppick.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 // Service Class
@@ -17,13 +26,20 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
+    private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
-    public UserService(UserRepository userRepository, ModelMapper modelMapper, PasswordEncoder passwordEncoder) {
+    public UserService(
+            UserRepository userRepository,
+            ModelMapper modelMapper,
+            PasswordEncoder passwordEncoder,
+            JwtProvider jwtProvider,
+            AuthenticationManagerBuilder authenticationManagerBuilder) {
         this.userRepository = userRepository;
-        this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
+        this.jwtProvider = jwtProvider;
+        this.authenticationManagerBuilder = authenticationManagerBuilder;
     }
 
     /// Standard Login ///
@@ -37,7 +53,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User login(LoginRequestDto dto) {
+    public JwtResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -49,7 +65,17 @@ public class UserService {
             throw new RuntimeException("Invalid password");
         }
 
-        return user;
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole()));
+
+        // Authentication 객체 생성
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        dto.getEmail(),
+                        null,
+                        authorities
+        );
+
+        // JWT 토큰 생성
+        return jwtProvider.generateToken(authentication);
     }
 
     /// OAuth Login ///
@@ -65,22 +91,23 @@ public class UserService {
     }
 
     public User oauthLogin(String provider, String oauthId) {
-        User user = userRepository.findByOauthProviderAndOauthId(provider, oauthId)
+        return userRepository.findByOauthProviderAndOauthId(provider, oauthId)
                 .orElseThrow(() -> new RuntimeException("OAuth user not found"));
-
-        return user;
     }
 
-    public Optional<User> getUserById(Integer id) {
-        return userRepository.findById(id);
+    public User getUserById(Integer id) {
+        Optional<User> userOptional = userRepository.findById(id);
+        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public Optional<User> getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public User getUserByEmail(String email) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public Optional<User> getUserByOauth(String oauthProvider, String oauthId) {
-        return userRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId);
+    public User getUserByOauth(String oauthProvider, String oauthId) {
+        Optional<User> userOptional = userRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId);
+        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     public User updateUser(int userId, User updatedUser) {
