@@ -27,7 +27,7 @@ class HomeControllerTest {
     private DataSource dataSource;
 
     @Test
-    @DisplayName("DB 연결 확인 테스트")
+    @DisplayName("Check if DB connection is OK")
     void checkDatabaseConnection() throws Exception {
         // Mock the DataSource to return a valid connection
         Connection mockConnection = org.mockito.Mockito.mock(Connection.class);
@@ -39,7 +39,7 @@ class HomeControllerTest {
     }
 
     @Test
-    @DisplayName("DB 연결 실패 테스트")
+    @DisplayName("Check if DB connection is failed")
     void checkDatabaseConnectionFailure() throws Exception {
         // Mock the DataSource to throw an SQLException
         given(dataSource.getConnection()).willThrow(new SQLException("Unable to connect"));

@@ -36,12 +36,18 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	// PostgreSQL Dependency
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
 
+	// Model Mapper Dependency
+	implementation 'org.modelmapper:modelmapper:3.1.0'
+
+	// Validation Dependency
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
 tasks.named('test') {
