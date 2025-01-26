@@ -3,6 +3,7 @@ package com.kcdevdes.poppick.controller;
 import com.kcdevdes.poppick.domain.User;
 import com.kcdevdes.poppick.dto.*;
 import com.kcdevdes.poppick.util.JwtProvider;
+import com.kcdevdes.poppick.util.LimitedUserMapper;
 import com.kcdevdes.poppick.util.UserMapper;
 import com.kcdevdes.poppick.service.UserService;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
     private final UserMapper userMapper = new UserMapper();
+    private final LimitedUserMapper limitedUserMapper = new LimitedUserMapper();
     private final JwtProvider jwtProvider;
 
     public UserController(UserService userService, JwtProvider jwtProvider) {
@@ -95,6 +97,11 @@ public class UserController {
         return ResponseEntity.ok().body("User deleted successfully");
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<LimitedUserResponseDto> getUser(@PathVariable Integer id) {
+        User user = userService.getUserById(id);
+        return ResponseEntity.ok(limitedUserMapper.toDto(user));
+    }
 
     private String extractEmailFromToken(String token) {
         return token.replace("Bearer ", "");

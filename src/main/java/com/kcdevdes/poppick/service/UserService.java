@@ -4,6 +4,7 @@ import com.kcdevdes.poppick.domain.User;
 import com.kcdevdes.poppick.dto.JwtResponseDto;
 import com.kcdevdes.poppick.dto.LoginRequestDto;
 import com.kcdevdes.poppick.dto.SignupRequestDto;
+import com.kcdevdes.poppick.exception.ResourceNotFoundException;
 import com.kcdevdes.poppick.util.JwtProvider;
 import com.kcdevdes.poppick.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -96,7 +97,7 @@ public class UserService {
 
     public User getUserById(Integer id) {
         Optional<User> userOptional = userRepository.findById(id);
-        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+        return userOptional.orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
     }
 
     public User getUserByEmail(String email) {
