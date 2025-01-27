@@ -2,15 +2,15 @@ package com.kcdevdes.poppick.controller;
 
 import com.kcdevdes.poppick.domain.User;
 import com.kcdevdes.poppick.service.UserService;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/v1/users/oauth/google")
@@ -29,32 +29,37 @@ public class OauthController {
     }
 
     @GetMapping("/redirect")
-    public ResponseEntity<?> handleRedirect(OAuth2AuthenticationToken authenticationToken) {
-        if (authenticationToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
-        }
-
-        OAuth2User oAuth2User = authenticationToken.getPrincipal();
-        String email = oAuth2User.getAttribute("email");
-        String name = oAuth2User.getAttribute("name");
-        String profileImage = oAuth2User.getAttribute("picture");
-
-        // 사용자 등록 또는 처리 로직
-        User user = userService.registerOauthUser(email, authenticationToken.getPrincipal().getName(),
-                authenticationToken.getAuthorizedClientRegistrationId(), name, profileImage);
-
-        if (user != null) {
-            return ResponseEntity.ok("User authenticated: " + email);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User registration failed");
-        }
+    public ResponseEntity<?> handleRedirect() {
+        return ResponseEntity.ok("Redirected from Google. Processing...");
     }
 
 
     @GetMapping("/success")
-    public ResponseEntity<?> loginSuccess() {
-        return ResponseEntity.ok("Login successful! You are now authenticated.");
+public ResponseEntity<?> loginSuccess(OAuth2AuthenticationToken authenticationToken) {
+    OAuth2User oAuth2User = authenticationToken.getPrincipal();
+    String email = oAuth2User.getAttribute("email");
+    String name = oAuth2User.getAttribute("name");
+    String profileImage = oAuth2User.getAttribute("picture");
+    String oauthProvider = authenticationToken.getAuthorizedClientRegistrationId();
+    String oauthId = oAuth2User.getName();
+
+    Optional<User> userOptional = userService.getUserByEmail(email);
+
+    if (userOptional.isPresent()) {
+        // 기존 사용자 업데이트
+        User user = userOptional.get();
+        user.setUsername(name);
+        user.setProfileImage(profileImage);
+        user.setOauthProvider(oauthProvider);
+        user.setOauthId(oauthId);
+        userService.updateUser(user.getId(), user);
+    } else {
+        // 새로운 사용자 등록
+        userService.registerOauthUser(email, oauthId, oauthProvider, name, profileImage);
     }
+
+    return ResponseEntity.ok().body(userService.oauthLogin(email, oauthProvider, oauthId));
+}
 
     @GetMapping("/fail")
     public ResponseEntity<?> loginFail() {

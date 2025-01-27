@@ -36,31 +36,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for API-based authentication
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/v1/users/signup", "/v1/users/login").permitAll()
-                    // id 기반 검색도 허용
-                .requestMatchers("/v1/users/oauth/google", "/v1/users/oauth/google/redirect", "/v1/users/oauth/google/fail").permitAll()
-                .requestMatchers("/v1/users/oauth/google/success", "/v1/users/me").authenticated()
-                .anyRequest().authenticated()
+        .csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(authorize -> authorize
+            .requestMatchers("/v1/users/signup", "/v1/users/login").permitAll()
+            .requestMatchers("/v1/users/oauth/google/redirect", "/v1/users/oauth/google/fail").permitAll()
+            .requestMatchers("/v1/users/me").authenticated()
+            .anyRequest().authenticated()
+        )
+        .oauth2Login(oauth2 -> oauth2
+            .successHandler((request, response, authentication) -> {
+                // Redirect to success URL
+                response.sendRedirect("/v1/users/oauth/google/success");
+            })
+            .failureHandler((request, response, exception) -> {
+                // Redirect to failure URL
+                response.sendRedirect("/v1/users/oauth/google/fail");
+            })
+            .redirectionEndpoint(redirection -> redirection
+                .baseUri("/v1/users/oauth/google/redirect")
             )
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) // Return 401 error instead of redirect
+            .userInfoEndpoint(userInfo -> userInfo
+                .userAuthoritiesMapper(grantedAuthoritiesMapper())
             )
-            .oauth2Login(oauth2 -> oauth2
-                .loginPage("/v1/users/oauth/google")
-                .defaultSuccessUrl("/v1/users/oauth/google/success")
-                .failureUrl("/v1/users/oauth/google/fail")
-                            .redirectionEndpoint(redirection -> redirection
-                    .baseUri("/v1/users/oauth/google/redirect") // 리디렉션 URL 설정
-                )
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userAuthoritiesMapper(grantedAuthoritiesMapper())
-                )
-            )
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        )
+        .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
+    return http.build();
     }
 
     private GrantedAuthoritiesMapper grantedAuthoritiesMapper() {
