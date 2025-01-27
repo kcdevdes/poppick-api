@@ -29,7 +29,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-    private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
     public UserService(
             UserRepository userRepository,
@@ -40,7 +39,6 @@ public class UserService {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
-        this.authenticationManagerBuilder = authenticationManagerBuilder;
     }
 
     /// Standard Login ///
@@ -80,21 +78,33 @@ public class UserService {
     }
 
     /// OAuth Login ///
-    public User registerOauthUser(String email, String provider, String oauthId, String name, String profileImage) {
+    public User registerOauthUser(String email, String oauthId, String oauthProvider, String name, String profileImage) {
         User user = new User();
         user.setEmail(email);
-        user.setOauthProvider(provider);
-        user.setOauthId(oauthId);
         user.setUsername(name);
-        user.setRole(Role.USER);
         user.setProfileImage(profileImage);
+        user.setOauthProvider(oauthProvider);
+        user.setOauthId(oauthId);
+        user.setRole(Role.USER);
 
         return userRepository.save(user);
     }
 
-    public User oauthLogin(String provider, String oauthId) {
-        return userRepository.findByOauthProviderAndOauthId(provider, oauthId)
-                .orElseThrow(() -> new RuntimeException("OAuth user not found"));
+    public JwtResponseDto oauthLogin(String email, String provider, String oauthId) {
+        Optional<User> userOptional = getUserByOauth(email, provider, oauthId);
+        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole().getKey()));
+
+        // Authentication 객체 생성
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        email,
+                        null,
+                        authorities
+        );
+
+        // JWT 토큰 생성
+        return jwtProvider.generateToken(authentication);
     }
 
     public User getUserById(Integer id) {
@@ -102,14 +112,13 @@ public class UserService {
         return userOptional.orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
     }
 
-    public User getUserByEmail(String email) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
-        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
-    public User getUserByOauth(String oauthProvider, String oauthId) {
-        Optional<User> userOptional = userRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId);
-        return userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+
+    public Optional<User> getUserByOauth(String email, String oauthProvider, String oauthId) {
+        return userRepository.findByEmailAndOauthProviderAndOauthId(email, oauthProvider, oauthId);
     }
 
     public User updateUser(int userId, User updatedUser) {

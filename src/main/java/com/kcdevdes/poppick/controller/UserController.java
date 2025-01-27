@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/v1/users")
@@ -48,7 +49,9 @@ public class UserController {
 
         // Retrieve user email from token
         String email = jwtProvider.getEmailFromToken(jwt);
-        User user = userService.getUserByEmail(email);
+        Optional<User> userOptional = userService.getUserByEmail(email);
+        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+
 
         return ResponseEntity.ok(userMapper.toDto(user));
     }
@@ -66,7 +69,8 @@ public class UserController {
         String email = jwtProvider.getEmailFromToken(jwt);
 
         // 사용자 검색
-        User user = userService.getUserByEmail(email);
+        Optional<User> userOptional = userService.getUserByEmail(email);
+        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
 
         // 요청 DTO에 따라 사용자 정보 업데이트
         if (requestDto.getUsername() != null && !requestDto.getUsername().isEmpty()) {
@@ -94,7 +98,9 @@ public class UserController {
 
         // Retrieve user email from token
         String email = jwtProvider.getEmailFromToken(jwt);
-        User user = userService.getUserByEmail(email);
+        Optional<User> userOptional = userService.getUserByEmail(email);
+        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+
 
         userService.deleteUser(user.getId());
         return ResponseEntity.ok().body("User deleted successfully");
