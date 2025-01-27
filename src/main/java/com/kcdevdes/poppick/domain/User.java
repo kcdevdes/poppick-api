@@ -27,8 +27,9 @@ public class User {
     @Column(nullable = true)
     private String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role = "USER";
+    private Role role;
 
     @Column(name = "profile_image")
     private String profileImage;
@@ -58,5 +59,13 @@ public class User {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    @Builder // Builder Pattern 사용
+    public User(String name, String email, String profileImage, Role role) {
+        this.username = name;
+        this.email = email;
+        this.profileImage = profileImage;
+        this.role = role;
     }
 }

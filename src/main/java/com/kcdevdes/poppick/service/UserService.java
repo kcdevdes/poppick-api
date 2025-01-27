@@ -1,5 +1,6 @@
 package com.kcdevdes.poppick.service;
 
+import com.kcdevdes.poppick.domain.Role;
 import com.kcdevdes.poppick.domain.User;
 import com.kcdevdes.poppick.dto.JwtResponseDto;
 import com.kcdevdes.poppick.dto.LoginRequestDto;
@@ -48,7 +49,7 @@ public class UserService {
         user.setEmail(dto.getEmail());
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        user.setRole("USER");
+        user.setRole(Role.USER);
 
         return userRepository.save(user);
     }
@@ -65,7 +66,7 @@ public class UserService {
             throw new RuntimeException("Invalid password");
         }
 
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole()));
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole().getKey()));
 
         // Authentication 객체 생성
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -79,13 +80,14 @@ public class UserService {
     }
 
     /// OAuth Login ///
-    public User registerOauthUser(String email, String provider, String oauthId, String name) {
+    public User registerOauthUser(String email, String provider, String oauthId, String name, String profileImage) {
         User user = new User();
         user.setEmail(email);
         user.setOauthProvider(provider);
         user.setOauthId(oauthId);
         user.setUsername(name);
-        user.setRole("USER");
+        user.setRole(Role.USER);
+        user.setProfileImage(profileImage);
 
         return userRepository.save(user);
     }
