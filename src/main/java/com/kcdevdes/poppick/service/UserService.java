@@ -1,27 +1,24 @@
 package com.kcdevdes.poppick.service;
 
-import com.kcdevdes.poppick.domain.Role;
-import com.kcdevdes.poppick.domain.User;
-import com.kcdevdes.poppick.dto.JwtResponseDto;
-import com.kcdevdes.poppick.dto.LoginRequestDto;
-import com.kcdevdes.poppick.dto.SignupRequestDto;
-import com.kcdevdes.poppick.exception.ResourceNotFoundException;
+import com.kcdevdes.poppick.dto.request.OauthSignupRequestDto;
+import com.kcdevdes.poppick.entity.Role;
+import com.kcdevdes.poppick.entity.User;
+import com.kcdevdes.poppick.dto.response.JwtResponseDto;
+import com.kcdevdes.poppick.dto.request.LoginRequestDto;
+import com.kcdevdes.poppick.dto.request.SignupRequestDto;
 import com.kcdevdes.poppick.util.JwtProvider;
 import com.kcdevdes.poppick.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 
-// Service Class
 @Service
 @Transactional
 public class UserService {
@@ -32,131 +29,250 @@ public class UserService {
 
     public UserService(
             UserRepository userRepository,
-            ModelMapper modelMapper,
             PasswordEncoder passwordEncoder,
-            JwtProvider jwtProvider,
-            AuthenticationManagerBuilder authenticationManagerBuilder) {
+            JwtProvider jwtProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
     }
 
-    /// Standard Login ///
-    public User registerStandardUser(SignupRequestDto dto) {
+    /////////////////////////////////////////////////////////////
+    //////////////// Standard Login /////////////////////////////
+    /////////////////////////////////////////////////////////////
+
+    /**
+     * Register a new user
+     *
+     * @param dto
+     * @return the saved entity
+     * @throws ResponseStatusException if email already exists
+     */
+    public User registerUser(SignupRequestDto dto) {
+        // Check if email already exists
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email Already Exists");
+        }
+
+        // Create user object
         User user = new User();
         user.setEmail(dto.getEmail());
-        user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setUsername(dto.getUsername());
         user.setRole(Role.USER);
 
         return userRepository.save(user);
     }
 
-    public JwtResponseDto login(LoginRequestDto dto) {
+    /**
+     * issue JWT for a user - same as login
+     *
+     * @param dto
+     * @return JWT token
+     * @throws ResponseStatusException when user not found / password incorrect / user signed up with OAuth
+     */
+    public JwtResponseDto issueJWT(LoginRequestDto dto) {
+        // Retrieve user info from database
         User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong Credentials"));
 
-        if (user.getPassword() == null) {
-            throw new RuntimeException("This account is linked to an OAuth provider");
+        // Check if user signed up as a standard auth user
+        if (isOAuthUser(user)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "OAuth Login Required");
         }
 
+        // Check if password is correct
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong Credentials");
         }
 
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole().getKey()));
-
-        // Authentication 객체 생성
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                        dto.getEmail(),
-                        null,
-                        authorities
+                dto.getEmail(),
+                null,
+                List.of(new SimpleGrantedAuthority(user.getRole().getKey()))
         );
 
-        // JWT 토큰 생성
+        // Create JWT token and return it
         return jwtProvider.generateToken(authentication);
     }
 
-    /// OAuth Login ///
-    public User registerOauthUser(String email, String oauthId, String oauthProvider, String name, String profileImage) {
-        User user = new User();
-        user.setEmail(email);
-        user.setUsername(name);
-        user.setProfileImage(profileImage);
-        user.setOauthProvider(oauthProvider);
-        user.setOauthId(oauthId);
-        user.setRole(Role.USER);
+    /// //////////////////////////////////////////////////////////
+    /// /////////////   OAuth Login  /////////////////////////////
+    /// //////////////////////////////////////////////////////////
+
+    /**
+     * Register a new user with OAuth
+     *
+     * @param dto
+     * @return the saved entity
+     * @throws ResponseStatusException if email already exists / OAuth credentials mismatch
+     */
+    public User registerOauthUser(OauthSignupRequestDto dto) {
+        // Check if email already exists
+        User user = getUserByOauth(dto.getEmail(), dto.getOauthProvider(), dto.getOauthId());
+        if (user != null) {
+            // Update existing user to OAuth details
+            user.setOauthProvider(dto.getOauthProvider());
+            user.setOauthId(dto.getOauthId());
+            user.setPassword(null);
+
+        } else {
+            // Create new user
+            user = new User();
+            user.setEmail(dto.getEmail());
+            user.setUsername(dto.getUsername());
+            user.setOauthProvider(dto.getOauthProvider());
+            user.setOauthId(dto.getOauthId());
+            user.setRole(Role.USER);
+            user.setProfileImage(dto.getProfileImage());
+
+        }
+        return userRepository.save(user);
+    }
+
+
+    /**
+     * Issue JWT for a user - same as OAuth login
+     *
+     * @param email    user's email
+     * @param provider OAuth provider
+     * @param oauthId  OAuth ID
+     * @return JWT token
+     * @throws ResponseStatusException when user not found, mismatched OAuth details, or user signed up with standard auth
+     */
+    public JwtResponseDto oauthLogin(String email, String provider, String oauthId) {
+        // Find user by email
+        User user = getUserByOauth(email, provider, oauthId);
+
+        // Create authentication object
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                email,
+                null,
+                List.of(new SimpleGrantedAuthority(user.getRole().getKey()))
+        );
+
+        // Generate JWT token
+        return jwtProvider.generateToken(authentication);
+    }
+
+    /**
+     * Get a user by ID
+     *
+     * @param id
+     * @return User
+     * @throws ResponseStatusException if user not found
+     */
+    public User getUserById(Integer id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found"));
+    }
+
+    /**
+     * Get a user by email
+     *
+     * @param email
+     * @return User
+     * @throws ResponseStatusException if user not found
+     */
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found"));
+    }
+
+    /**
+     * Get a user by OAuth provider and ID
+     *
+     * @param email
+     * @param oauthProvider
+     * @param oauthId
+     * @return User
+     * @throws ResponseStatusException if user not found or OAuth details mismatch
+     */
+    public User getUserByOauth(String email, String oauthProvider, String oauthId) {
+        // Check if user exists and OAuth details match
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found"));
+        if (!isOAuthUser(user)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Standard Auth Required");
+        }
+
+        if (!compareOauthDetails(user, oauthProvider, oauthId)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong OAuth credentials");
+        }
+
+        return user;
+    }
+
+    /**
+     * Update a user by ID
+     *
+     * @param userId
+     * @param updatedUser
+     * @return updated user
+     */
+    public User updateUserById(int userId, User updatedUser) {
+        User user = getUserById(userId);
+
+        // Update user details
+        user.setUsername(updatedUser.getUsername());
+        user.setProfileImage(updatedUser.getProfileImage());
 
         return userRepository.save(user);
     }
 
-    public JwtResponseDto oauthLogin(String email, String provider, String oauthId) {
-        Optional<User> userOptional = getUserByOauth(email, provider, oauthId);
-        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+    /**
+     * Update a user by email
+     *
+     * @param email
+     * @param updatedUser
+     * @return updated user
+     */
+    public User updateUserByEmail(String email, User updatedUser) {
+        User user = getUserByEmail(email);
 
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole().getKey()));
+        // Update user details
+        user.setUsername(updatedUser.getUsername());
+        user.setProfileImage(updatedUser.getProfileImage());
 
-        // Authentication 객체 생성
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        authorities
-        );
-
-        // JWT 토큰 생성
-        return jwtProvider.generateToken(authentication);
+        return userRepository.save(user);
     }
 
-    public User getUserById(Integer id) {
-        Optional<User> userOptional = userRepository.findById(id);
-        return userOptional.orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
+    /**
+     * Delete a user by ID
+     *
+     * @param id
+     */
+    public void deleteUserById(int id) {
+        User user = getUserById(id);
+        userRepository.delete(user);
     }
 
-    public Optional<User> getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+    /**
+     * Delete a user by email
+     *
+     * @param email
+     */
+    public void deleteUserByEmail(String email) {
+        User user = getUserByEmail(email);
+        userRepository.delete(user);
     }
 
-
-    public Optional<User> getUserByOauth(String email, String oauthProvider, String oauthId) {
-        return userRepository.findByEmailAndOauthProviderAndOauthId(email, oauthProvider, oauthId);
+    /**
+     * Check if a user is an OAuth user
+     * @param user
+     * @return true if user is an OAuth user
+     */
+    private boolean isOAuthUser(User user) {
+        return user.getOauthProvider() != null && user.getOauthId() != null;
     }
 
-    public User updateUser(int userId, User updatedUser) {
-        // Find the existing user
-        User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Update fields
-        existingUser.setUsername(updatedUser.getUsername());
-        existingUser.setEmail(updatedUser.getEmail());
-
-        // Save updated user
-        return userRepository.save(existingUser);
+    /**
+     * Compare OAuth details
+     * @param user
+     * @param provider
+     * @param oauthId
+     * @return true if OAuth details match
+     */
+    private boolean compareOauthDetails(User user, String provider, String oauthId) {
+        return user.getOauthProvider().equals(provider) && user.getOauthId().equals(oauthId);
     }
-
-    public void deleteUser(Integer id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
-        }
-
-        userRepository.deleteById(id);
-    }
-
-    ///  Util Methods ///
-    public UserType getUserType(User user) {
-        if (user.getOauthProvider() != null && user.getOauthId() != null) {
-            return UserType.OAUTH;
-        } else {
-            return UserType.STANDARD;
-        }
-    }
-
-    public boolean validatePassword(String rawPassword, String encodedPassword) {
-        return passwordEncoder.matches(rawPassword, encodedPassword);
-    }
-}
-
-enum UserType {
-    STANDARD,
-    OAUTH,
 }

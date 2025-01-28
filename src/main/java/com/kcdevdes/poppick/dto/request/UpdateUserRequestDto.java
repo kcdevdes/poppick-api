@@ -1,6 +1,5 @@
-package com.kcdevdes.poppick.dto;
+package com.kcdevdes.poppick.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,7 +10,7 @@ import org.hibernate.validator.constraints.URL;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateUserRequestDto {
-    @Size(min = 4, message = "Name must be at least 4 characters long")
+    @Size(min = 4, max = 30, message = "Username must be between 4 and 30 characters")
     private String username;
 
     @URL(message = "Profile image must be a valid URL")

@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.dto;
+package com.kcdevdes.poppick.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

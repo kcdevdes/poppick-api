@@ -1,7 +1,7 @@
 package com.kcdevdes.poppick.util;
 
-import com.kcdevdes.poppick.domain.User;
-import com.kcdevdes.poppick.dto.LimitedUserResponseDto;
+import com.kcdevdes.poppick.entity.User;
+import com.kcdevdes.poppick.dto.response.LimitedUserResponseDto;
 
 public class LimitedUserMapper implements Mapper<User, LimitedUserResponseDto> {
     @Override

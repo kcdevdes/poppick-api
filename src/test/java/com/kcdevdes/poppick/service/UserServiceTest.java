@@ -1,8 +1,8 @@
 package com.kcdevdes.poppick.service;
 
-import com.kcdevdes.poppick.domain.User;
-import com.kcdevdes.poppick.dto.LoginRequestDto;
-import com.kcdevdes.poppick.dto.SignupRequestDto;
+import com.kcdevdes.poppick.entity.User;
+import com.kcdevdes.poppick.dto.request.LoginRequestDto;
+import com.kcdevdes.poppick.dto.request.SignupRequestDto;
 import com.kcdevdes.poppick.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,14 +39,14 @@ class UserServiceTest {
     }
 
     @Test
-    void registerStandardUser() {
+    void registerUser() {
         // Given
         SignupRequestDto signupRequestDto = new SignupRequestDto("test@example.com", "John Doe", "password123");
         User mockUser = new User(1, "test@example.com", "John Doe", null, "USER", null, null, null, null, null);
         when(userRepository.save(any(User.class))).thenReturn(mockUser);
 
         // When
-        User createdUser = userService.registerStandardUser(signupRequestDto);
+        User createdUser = userService.registerUser(signupRequestDto);
 
         // Then
         assertThat(createdUser.getEmail()).isEqualTo("test@example.com");
@@ -55,7 +55,7 @@ class UserServiceTest {
     }
 
     @Test
-    void loginStandardUser() {
+    void issueJWTStandardUser() {
         // Given
         LoginRequestDto loginRequestDto = new LoginRequestDto("test@example.com",  "password123");
         User mockUser = new User(1, "test@example.com", "John Doe", "password123", "USER", null, null, null, null, null);
@@ -63,7 +63,7 @@ class UserServiceTest {
 
 
         // When
-        User createdUser = userService.login(loginRequestDto);
+        User createdUser = userService.issueJWT(loginRequestDto);
 
         // Then
         assertThat(createdUser.getEmail()).isEqualTo("test@example.com");

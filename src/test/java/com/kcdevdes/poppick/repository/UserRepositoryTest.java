@@ -1,6 +1,6 @@
 package com.kcdevdes.poppick.repository;
 
-import com.kcdevdes.poppick.domain.User;
+import com.kcdevdes.poppick.entity.User;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
