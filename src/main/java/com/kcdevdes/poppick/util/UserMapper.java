@@ -1,7 +1,7 @@
 package com.kcdevdes.poppick.util;
 
-import com.kcdevdes.poppick.domain.User;
-import com.kcdevdes.poppick.dto.UserResponseDto;
+import com.kcdevdes.poppick.entity.User;
+import com.kcdevdes.poppick.dto.response.UserResponseDto;
 
 public class UserMapper implements Mapper<User, UserResponseDto> {
     @Override

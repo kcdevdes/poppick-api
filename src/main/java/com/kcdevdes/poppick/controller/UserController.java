@@ -1,7 +1,9 @@
 package com.kcdevdes.poppick.controller;
 
-import com.kcdevdes.poppick.domain.User;
-import com.kcdevdes.poppick.dto.*;
+import com.kcdevdes.poppick.dto.request.UpdateUserRequestDto;
+import com.kcdevdes.poppick.dto.response.LimitedUserResponseDto;
+import com.kcdevdes.poppick.dto.response.UserResponseDto;
+import com.kcdevdes.poppick.entity.User;
 import com.kcdevdes.poppick.util.JwtProvider;
 import com.kcdevdes.poppick.util.LimitedUserMapper;
 import com.kcdevdes.poppick.util.UserMapper;
@@ -9,11 +11,7 @@ import com.kcdevdes.poppick.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/v1/users")
@@ -28,30 +26,14 @@ public class UserController {
         this.jwtProvider = jwtProvider;
     }
 
-    @PostMapping("/signup")
-    public User signup(@Valid @RequestBody SignupRequestDto requestDto) {
-        return userService.registerStandardUser(requestDto);
-    }
-
-    @PostMapping("/login")
-    public JwtResponseDto login(@Valid @RequestBody LoginRequestDto requestDto) {
-        return userService.login(requestDto);
-    }
-
     @GetMapping("/me")
-    public ResponseEntity<UserResponseDto> getMyUser(@RequestHeader("Authorization") String token) {
-        // Extract user email from token
-        String jwt = extractEmailFromToken(token);
-
-        if (!jwtProvider.validateToken(jwt)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-
-        // Retrieve user email from token
+    public ResponseEntity<UserResponseDto> getMe(@RequestHeader("Authorization") String token) {
+        // Extract email from token
+        String jwt = extractTokenFromHeader(token);
         String email = jwtProvider.getEmailFromToken(jwt);
-        Optional<User> userOptional = userService.getUserByEmail(email);
-        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Search for user
+        User user = userService.getUserByEmail(email);
 
         return ResponseEntity.ok(userMapper.toDto(user));
     }
@@ -60,50 +42,35 @@ public class UserController {
     public ResponseEntity<UserResponseDto> updateMyUser(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody UpdateUserRequestDto requestDto) {
-
-        // JWT 검증 및 이메일 추출
-        String jwt = extractEmailFromToken(token);
-        if (!jwtProvider.validateToken(jwt)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
+        // Extract email from token
+        String jwt = extractTokenFromHeader(token);
         String email = jwtProvider.getEmailFromToken(jwt);
 
-        // 사용자 검색
-        Optional<User> userOptional = userService.getUserByEmail(email);
-        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+        // Search for user
+        User user = userService.getUserByEmail(email);
 
-        // 요청 DTO에 따라 사용자 정보 업데이트
-        if (requestDto.getUsername() != null && !requestDto.getUsername().isEmpty()) {
-            user.setUsername(requestDto.getUsername());
-        }
-        if (requestDto.getProfileImage() != null && !requestDto.getProfileImage().isEmpty()) {
+        // Update user
+        if (requestDto.getProfileImage() != null) {
             user.setProfileImage(requestDto.getProfileImage());
         }
-
-        // 사용자 정보 저장
-        User updatedUser = userService.updateUser(user.getId(), user);
-
-        return ResponseEntity.ok(userMapper.toDto(updatedUser));
+        if (requestDto.getUsername() != null) {
+            user.setUsername(requestDto.getUsername());
+        }
+        return ResponseEntity.ok(userMapper.toDto(userService.updateUserByEmail(user.getEmail(), user)));
     }
 
-
     @DeleteMapping("/me")
-    public ResponseEntity<String> deleteMyUser(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<LimitedUserResponseDto> deleteMyUser(@RequestHeader("Authorization") String token) {
         // Extract user email from token
-        String jwt = extractEmailFromToken(token);
-
-        if (!jwtProvider.validateToken(jwt)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
-        }
-
-        // Retrieve user email from token
+        String jwt = extractTokenFromHeader(token);
         String email = jwtProvider.getEmailFromToken(jwt);
-        Optional<User> userOptional = userService.getUserByEmail(email);
-        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Get User by email
+        User user = userService.getUserByEmail(email);
 
-        userService.deleteUser(user.getId());
-        return ResponseEntity.ok().body("User deleted successfully");
+        // Delete user
+        userService.deleteUserByEmail(email);
+        return ResponseEntity.ok(limitedUserMapper.toDto(user));
     }
 
     @GetMapping("/{id}")
@@ -112,7 +79,12 @@ public class UserController {
         return ResponseEntity.ok(limitedUserMapper.toDto(user));
     }
 
-    private String extractEmailFromToken(String token) {
+    /**
+     * Extract token from header
+     * @param token
+     * @return token - without "Bearer "
+     */
+    private String extractTokenFromHeader(String token) {
         return token.replace("Bearer ", "");
     }
 }
