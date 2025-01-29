@@ -42,7 +42,8 @@ public class JwtProvider {
      * Generate a new access token and refresh token
      *
      * @param authentication
-     * @return JwtResponseDto containing the tokens
+     * @param isRefresh
+     * @return JwtResponseDto object
      */
     public JwtResponseDto generateToken(Authentication authentication, boolean isRefresh) {
         String authorities = authentication.getAuthorities().stream()

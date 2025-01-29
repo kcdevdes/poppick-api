@@ -95,7 +95,7 @@ public class AuthService {
         );
 
         // Create JWT token and return it
-        return jwtProvider.generateToken(authentication);
+        return jwtProvider.generateToken(authentication, false);
     }
 
     /**
@@ -121,7 +121,7 @@ public class AuthService {
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user.getEmail(), null, List.of(new SimpleGrantedAuthority(user.getRole().getKey()))
         );
-        return jwtProvider.generateToken(authentication);
+        return jwtProvider.generateToken(authentication, true);
     }
 
     /// //////////////////////////////////////////////////////////
@@ -180,7 +180,7 @@ public class AuthService {
         );
 
         // Generate JWT token
-        return jwtProvider.generateToken(authentication);
+        return jwtProvider.generateToken(authentication, false);
     }
 
 
