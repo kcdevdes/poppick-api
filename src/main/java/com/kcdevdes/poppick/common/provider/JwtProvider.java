@@ -44,13 +44,20 @@ public class JwtProvider {
      * @param authentication
      * @return JwtResponseDto containing the tokens
      */
-    public JwtResponseDto generateToken(Authentication authentication) {
+    public JwtResponseDto generateToken(Authentication authentication, boolean isRefresh) {
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         String accessToken = createToken(authentication.getName(), authorities, ACCESS_TOKEN_EXPIRATION);
         String refreshToken = createToken(authentication.getName(), authorities, REFRESH_TOKEN_EXPIRATION);
+
+        if (isRefresh) {
+            return JwtResponseDto.builder()
+                    .grantType("Bearer")
+                    .accessToken(accessToken)
+                    .build();
+        }
 
         return JwtResponseDto.builder()
                 .grantType("Bearer")
