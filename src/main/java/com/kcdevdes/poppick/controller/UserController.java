@@ -4,12 +4,11 @@ import com.kcdevdes.poppick.dto.request.UpdateUserRequestDto;
 import com.kcdevdes.poppick.dto.response.LimitedUserResponseDto;
 import com.kcdevdes.poppick.dto.response.UserResponseDto;
 import com.kcdevdes.poppick.entity.User;
-import com.kcdevdes.poppick.util.JwtProvider;
-import com.kcdevdes.poppick.util.LimitedUserMapper;
-import com.kcdevdes.poppick.util.UserMapper;
+import com.kcdevdes.poppick.common.provider.JwtProvider;
+import com.kcdevdes.poppick.common.util.LimitedUserMapper;
+import com.kcdevdes.poppick.common.util.UserMapper;
 import com.kcdevdes.poppick.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

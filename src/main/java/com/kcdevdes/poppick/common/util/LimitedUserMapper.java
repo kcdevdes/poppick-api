@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.util;
+package com.kcdevdes.poppick.common.util;
 
 import com.kcdevdes.poppick.entity.User;
 import com.kcdevdes.poppick.dto.response.LimitedUserResponseDto;

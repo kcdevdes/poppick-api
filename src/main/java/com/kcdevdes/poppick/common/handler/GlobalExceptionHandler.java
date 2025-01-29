@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.util;
+package com.kcdevdes.poppick.common.handler;
 
 import com.kcdevdes.poppick.dto.response.ApiErrorResponseDto;
 import org.springframework.http.HttpStatus;

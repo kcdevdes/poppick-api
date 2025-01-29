@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.util;
+package com.kcdevdes.poppick.common.provider;
 
 import com.kcdevdes.poppick.dto.response.JwtResponseDto;
 import io.jsonwebtoken.Claims;
@@ -31,20 +31,26 @@ public class JwtProvider {
 
     private final Key key;
     private static final long ACCESS_TOKEN_EXPIRATION = 3600000L; // 1 hour
-    private static final long REFRESH_TOKEN_EXPIRATION = 604800000L; // 7 days
+    private static final long REFRESH_TOKEN_EXPIRATION = 30L * 24 * 60 * 60 * 1000; // 30 days
 
     public JwtProvider(JwtProperties jwtProperties, PasswordEncoder passwordEncoder) {
         byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
+    /**
+     * Generate a new access token and refresh token
+     *
+     * @param authentication
+     * @return JwtResponseDto containing the tokens
+     */
     public JwtResponseDto generateToken(Authentication authentication) {
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         String accessToken = createToken(authentication.getName(), authorities, ACCESS_TOKEN_EXPIRATION);
-        String refreshToken = createToken(null, null, REFRESH_TOKEN_EXPIRATION);
+        String refreshToken = createToken(authentication.getName(), authorities, REFRESH_TOKEN_EXPIRATION);
 
         return JwtResponseDto.builder()
                 .grantType("Bearer")
@@ -53,8 +59,12 @@ public class JwtProvider {
                 .build();
     }
 
-
-    // Validate the token
+    /**
+     * Validate the token
+     *
+     * @param token
+     * @return true if valid, false if invalid
+     */
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -63,10 +73,18 @@ public class JwtProvider {
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Token");
+            return false;
         }
     }
 
+    /**
+     * Create a new token
+     *
+     * @param subject
+     * @param authorities
+     * @param expirationTime
+     * @return token as a string
+     */
     private String createToken(String subject, String authorities, long expirationTime) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
@@ -77,6 +95,12 @@ public class JwtProvider {
                 .compact();
     }
 
+    /**
+     * Parse the claims from a token
+     *
+     * @param token
+     * @return Claims object
+     */
     private Claims parseClaims(String token) {
         try {
             return Jwts.parserBuilder()
@@ -89,6 +113,12 @@ public class JwtProvider {
         }
     }
 
+    /**
+     * Get the authentication object from a token
+     *
+     * @param token
+     * @return Authentication object
+     */
     public Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
 
@@ -106,6 +136,12 @@ public class JwtProvider {
         return new UsernamePasswordAuthenticationToken(userDetails, "", grantedAuthorities);
     }
 
+    /**
+     * Get the email from a token
+     *
+     * @param token
+     * @return email as a string
+     */
     public String getEmailFromToken(String token) {
         Claims claims = parseClaims(token);
         return claims.getSubject();

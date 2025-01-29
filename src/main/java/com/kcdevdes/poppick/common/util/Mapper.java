@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.util;
+package com.kcdevdes.poppick.common.util;
 
 public interface Mapper<E, D> {
     D toDto(E entity);

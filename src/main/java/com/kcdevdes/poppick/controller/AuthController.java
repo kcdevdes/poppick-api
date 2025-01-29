@@ -1,12 +1,14 @@
 package com.kcdevdes.poppick.controller;
 
 import com.kcdevdes.poppick.dto.request.OauthSignupRequestDto;
+import com.kcdevdes.poppick.dto.request.RefreshTokenRequestDto;
 import com.kcdevdes.poppick.dto.response.UserResponseDto;
 import com.kcdevdes.poppick.dto.response.JwtResponseDto;
 import com.kcdevdes.poppick.dto.request.LoginRequestDto;
 import com.kcdevdes.poppick.dto.request.SignupRequestDto;
+import com.kcdevdes.poppick.service.AuthService;
 import com.kcdevdes.poppick.service.UserService;
-import com.kcdevdes.poppick.util.UserMapper;
+import com.kcdevdes.poppick.common.util.UserMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,9 +25,11 @@ public class AuthController {
 
     private final UserService userService;
     private final UserMapper userMapper = new UserMapper();
+    private final AuthService authService;
 
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, AuthService authService) {
         this.userService = userService;
+        this.authService = authService;
     }
 
     /////////////////////////////////////////////////////////////
@@ -34,12 +38,18 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<UserResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.toDto(userService.registerUser(requestDto)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.toDto(authService.registerUser(requestDto)));
     }
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto) {
-        return ResponseEntity.ok(userService.issueJWT(requestDto));
+        return ResponseEntity.ok(authService.issueJWT(requestDto));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<JwtResponseDto> refreshToken(@RequestBody RefreshTokenRequestDto requestDto) {
+        JwtResponseDto jwtResponse = authService.refreshToken(requestDto.getRefreshToken());
+        return ResponseEntity.ok(jwtResponse);
     }
 
     //////////////////////////////////////////////////////////////
@@ -72,9 +82,9 @@ public class AuthController {
         dto.setOauthProvider(oauthProvider);
         dto.setOauthId(oauthId);
 
-        userService.registerOauthUser(dto);
+        authService.registerOauthUser(dto);
 
-        return ResponseEntity.ok().body(userService.oauthLogin(email, oauthProvider, oauthId));
+        return ResponseEntity.ok().body(authService.oauthLogin(email, oauthProvider, oauthId));
     }
 
     @GetMapping("/google/failure")

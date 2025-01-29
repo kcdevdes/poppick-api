@@ -1,4 +1,4 @@
-package com.kcdevdes.poppick.config;
+package com.kcdevdes.poppick.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

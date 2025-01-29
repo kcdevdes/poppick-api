@@ -1,9 +1,10 @@
-package com.kcdevdes.poppick.config;
+package com.kcdevdes.poppick.common.config;
 
-import com.kcdevdes.poppick.util.JwtAuthenticationFilter;
-import com.kcdevdes.poppick.util.JwtProvider;
+import com.kcdevdes.poppick.common.filter.JwtAuthenticationFilter;
+import com.kcdevdes.poppick.common.provider.JwtProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
@@ -43,14 +44,28 @@ public class SecurityConfig {
                 // Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
                         // Public endpoints
-                        .requestMatchers("/v1/auth/signup", "/v1/auth/login").permitAll()
+                        .requestMatchers("/v1/auth/signup", "/v1/auth/login", "/v1/users/{id:[0-9]+}").permitAll()
                         .requestMatchers("/v1/oauth/google/redirect", "/v1/oauth/google/failure").permitAll()
+                        .requestMatchers("/v1/auth/refresh").permitAll()
                         // Protected endpoint
                         .requestMatchers("/v1/users/me").authenticated()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // 인증 실패 시 응답 작성
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json");
+                            response.getWriter().write(createErrorResponse(
+                                    HttpStatus.UNAUTHORIZED.value(),
+                                    "Unauthorized",
+                                    "Authentication is required to access this resource.",
+                                    request.getRequestURI()
+                            ));
+                        })
+                )
 
                 // Configure OAuth2 Login
                 .oauth2Login(oauth2 -> oauth2
@@ -101,4 +116,18 @@ public class SecurityConfig {
             return mappedAuthorities;
         };
     }
+
+    private String createErrorResponse(int status, String error, String message, String path) {
+        String timestamp = java.time.LocalDateTime.now().toString();
+
+        return String.format(
+                "{ \"timestamp\": \"%s\", \"status\": %d, \"error\": \"%s\", \"message\": \"%s\", \"path\": \"%s\" }",
+                timestamp,
+                status,
+                error,
+                message,
+                path
+        );
+    }
+
 }

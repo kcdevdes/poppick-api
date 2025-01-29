@@ -1,6 +1,7 @@
-package com.kcdevdes.poppick.util;
+package com.kcdevdes.poppick.common.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kcdevdes.poppick.common.provider.JwtProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -29,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
+            // Extract token from request
             String token = resolveToken(request);
 
             if (token != null && jwtProvider.validateToken(token)) {
@@ -36,36 +39,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
 
+            // Continue filter chain
             filterChain.doFilter(request, response);
-        } catch (Exception e) {
-            handleException(response, e, request.getRequestURI());
+        } catch (Exception ex) {
+            handleException(response, ex, request.getRequestURI());
         }
     }
 
     private void handleException(HttpServletResponse response, Exception exception, String path) throws IOException {
-        // Create error response map
+        HttpStatus status = exception instanceof ResponseStatusException
+                ? HttpStatus.valueOf(((ResponseStatusException) exception).getStatusCode().value())
+                : HttpStatus.UNAUTHORIZED;
+
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("timestamp", LocalDateTime.now().toString());
-        errorResponse.put("status", HttpStatus.UNAUTHORIZED.value());
-        errorResponse.put("error", HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        errorResponse.put("message", "Invalid Token");
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", status.getReasonPhrase());
+        errorResponse.put("message", exception.getMessage() != null ? exception.getMessage() : "Unauthorized");
         errorResponse.put("path", path);
 
-        // Convert map to JSON
         ObjectMapper objectMapper = new ObjectMapper();
         String jsonResponse = objectMapper.writeValueAsString(errorResponse);
 
-        // Set response headers and body
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setStatus(status.value());
         response.setContentType("application/json");
         response.getWriter().write(jsonResponse);
     }
 
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
+        return (bearerToken != null && bearerToken.startsWith("Bearer ")) ? bearerToken.substring(7) : null;
     }
 }
+
