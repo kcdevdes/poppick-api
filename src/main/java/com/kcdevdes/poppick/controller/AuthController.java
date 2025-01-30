@@ -32,9 +32,9 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /////////////////////////////////////////////////////////////
-    //////////////// Standard Login /////////////////////////////
-    /////////////////////////////////////////////////////////////
+    /// //////////////////////////////////////////////////////////
+    /// ///////////// Standard Login /////////////////////////////
+    /// //////////////////////////////////////////////////////////
 
     @PostMapping("/signup")
     public ResponseEntity<UserResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto) {
@@ -45,16 +45,16 @@ public class AuthController {
     public ResponseEntity<JwtResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto) {
         return ResponseEntity.ok(authService.issueJWT(requestDto));
     }
-
+ 
     @PostMapping("/refresh")
     public ResponseEntity<JwtResponseDto> refreshToken(@RequestBody RefreshTokenRequestDto requestDto) {
         JwtResponseDto jwtResponse = authService.refreshToken(requestDto.getRefreshToken());
         return ResponseEntity.ok(jwtResponse);
     }
 
-    //////////////////////////////////////////////////////////////
-    /////////////////   OAuth Login  /////////////////////////////
-    //////////////////////////////////////////////////////////////
+    /// ///////////////////////////////////////////////////////////
+    /// //////////////   OAuth Login  /////////////////////////////
+    /// ///////////////////////////////////////////////////////////
 
     @GetMapping("/google/login")
     public void loginWithGoogle(HttpServletResponse response) throws IOException {
