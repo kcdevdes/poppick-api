@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // Public endpoints
                         .requestMatchers("/v1/auth/signup", "/v1/auth/login", "/v1/users/{id:[0-9]+}").permitAll()
-                        .requestMatchers("/v1/oauth/google/redirect", "/v1/oauth/google/failure").permitAll()
+                        .requestMatchers("/v1/auth/google/login", "/v1/oauth/google/redirect", "/v1/oauth/google/failure").permitAll()
                         .requestMatchers("/v1/auth/refresh").permitAll()
                         // Protected endpoint
                         .requestMatchers("/v1/users/me").authenticated()
