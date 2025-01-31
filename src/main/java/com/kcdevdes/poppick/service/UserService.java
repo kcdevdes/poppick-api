@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Optional;
+
 @Service
 @Transactional
 public class UserService {
@@ -53,8 +55,13 @@ public class UserService {
      */
     public User getUserByOauth(String email, String oauthProvider, String oauthId) {
         // Check if user exists and OAuth details match
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found"));
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isEmpty()) {
+            return null;
+        }
+
+        User user = userOptional.get();
+
         if (!isOAuthUser(user)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Standard Auth Required");
         }
